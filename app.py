@@ -19,23 +19,25 @@ from ibm_cloud_sdk_core.authenticators import IAMAuthenticator
 load_dotenv()
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 # Initialize Flask app with SocketIO
 app = Flask(__name__)
-app.secret_key = "your-secret-key-here"
+app.secret_key = os.getenv("SECRET_KEY", "default-secret-key")  # Use a default value for safety
 socketio = SocketIO(app)
 
 # Beta mode flag
 beta_mode = True
 
-# Hardcoded OAuth Credentials
-CLIENT_ID = "237809198690-ibrgillsl3n0s2909c40m7bn5ujs1hk2.apps.googleusercontent.com"
-CLIENT_SECRET = "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"
+# OAuth Credentials (loaded from .env)
+CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
+
+if not CLIENT_ID or not CLIENT_SECRET:
+    logger.error("Google OAuth credentials are missing. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env.")
 
 logger.info(f"Client ID: {CLIENT_ID}")
-logger.info(f"Client Secret: {CLIENT_SECRET}")
 
 # Initialize OAuth
 oauth = OAuth(app)
@@ -47,29 +49,51 @@ oauth.register(
     client_kwargs={"scope": "openid email profile"}
 )
 
-# Hardcoded API Keys
-XAI_API_KEY = "xai-ozgjayVZHRPwiXJroH1mU3GGdRr7HQoEJOWea9hIcsLuTMmo3R7nxWzNLT88AtD5bxJRPZyDrxkvHofY"
-OPENAI_API_KEY = "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"
-GEMINI_API_KEY = "AIzaSyDoYRxV8T2TIXdxDKY4z_bVzeVaSkzyL3k"
-WATSON_API_KEY = "Gq7Hai7sXevmqq3Thw5ZI51I719g9ur9wSt1EN-X0Yn8"
-STRIPE_SECRET_KEY = "your-stripe-secret-key"
-STRIPE_PUBLISHABLE_KEY = "your-stripe-publishable-key"
+# API Keys (loaded from .env)
+XAI_API_KEY = os.getenv("XAI_API_KEY")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+WATSON_API_KEY = os.getenv("WATSON_API_KEY")
+STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
+STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY")
 
 # API URLs and configurations
 XAI_API_URL = "https://api.x.ai/v1/chat/completions"
-WATSON_URL = "https://api.au-syd.natural-language-understanding.watson.cloud.ibm.com/instances/c33c4ab4-8618-4c74-9618-07f727dcb638"
+WATSON_URL = os.getenv("WATSON_URL")
+
+# Check for missing API keys
+missing_keys = []
+for key_name, key_value in [
+    ("XAI_API_KEY", XAI_API_KEY),
+    ("OPENAI_API_KEY", OPENAI_API_KEY),
+    ("GEMINI_API_KEY", GEMINI_API_KEY),
+    ("WATSON_API_KEY", WATSON_API_KEY),
+    ("STRIPE_SECRET_KEY", STRIPE_SECRET_KEY),
+    ("STRIPE_PUBLISHABLE_KEY", STRIPE_PUBLISHABLE_KEY),
+]:
+    if not key_value:
+        missing_keys.append(key_name)
+
+if missing_keys:
+    logger.error(f"Missing environment variables: {', '.join(missing_keys)}. Ensure they are set in .env.")
 
 # Configure APIs
-openai.api_key = OPENAI_API_KEY
-genai.configure(api_key=GEMINI_API_KEY)
+if OPENAI_API_KEY:
+    openai.api_key = OPENAI_API_KEY
+
+if GEMINI_API_KEY:
+    genai.configure(api_key=GEMINI_API_KEY)
 
 # Initialize Watson NLU
-authenticator = IAMAuthenticator(WATSON_API_KEY)
-natural_language_understanding = NaturalLanguageUnderstandingV1(
-    version='2022-04-07',
-    authenticator=authenticator
-)
-natural_language_understanding.set_service_url(WATSON_URL)
+if WATSON_API_KEY:
+    authenticator = IAMAuthenticator(WATSON_API_KEY)
+    natural_language_understanding = NaturalLanguageUnderstandingV1(
+        version="2022-04-07",
+        authenticator=authenticator
+    )
+    natural_language_understanding.set_service_url(WATSON_URL)
+else:
+    logger.warning("Watson API Key is missing. Natural Language Understanding service will not be initialized.")
 
 # System prompts for AI collaboration with role-specific adjustments
 system_prompts = {
