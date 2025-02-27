@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Set Display Name - MindMash.AI</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Set Your Display Name</h1>
+        <p>Welcome, {{ email }}! Choose a display name for MindMash.AI.</p>
+        <form method="POST" action="/set-name">
+            <input type="hidden" name="email" value="{{ email }}">
+            <input type="hidden" name="google_id" value="{{ google_id }}">
+            <input type="text" name="display_name" value="{{ display_name }}" placeholder="Display Name" required>
+            <button type="submit" class="button glow">Save</button>
+        </form>
+        <a href="/login" class="button">Back to Sign In</a>
+    </div>
+</body>
+</html>

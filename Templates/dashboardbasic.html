@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard - MindMash.AI</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+        .loading {
+            display: none;
+            font-size: 0.9em;
+            color: #ff00ff;
+            margin-left: 10px;
+            font-weight: bold;
+            text-shadow: 0 0 10px #ff00ff;
+        }
+        .progress-bar {
+            width: 100%;
+            max-width: 800px;
+            height: 10px;
+            background: #0a0a0a;
+            border: 1px solid #ff00ff;
+            margin: 10px auto;
+        }
+        #progress {
+            height: 100%;
+            background: linear-gradient(90deg, #00ffff, #ff00ff);
+            transition: width 0.5s ease;
+        }
+        /* Colorful AI names */
+        .chat-message .speaker {
+            font-weight: bold;
+        }
+        .chat-message.grok .speaker {
+            color: #00ffff; /* Cyan for Grok */
+        }
+        .chat-message.chatgpt .speaker {
+            color: #cc00ff; /* Purple for ChatGPT */
+        }
+        .chat-message.gemini .speaker {
+            color: #00ff00; /* Green for Gemini */
+        }
+        .chat-message.user .speaker {
+            color: #ffffff; /* White for user */
+        }
+        .chat-message.system .speaker {
+            color: #ffff00; /* Yellow for system */
+        }
+        /* Standout messages */
+        .chat-message {
+            margin: 5px 0;
+            padding: 8px;
+            background: rgba(20, 20, 20, 0.9); /* Darker semi-transparent background */
+            border: 1px solid #ff00ff; /* Purple border */
+            border-radius: 5px;
+            box-shadow: 0 0 5px #00ffff; /* Cyan glow */
+        }
+        .chat-message .message-content {
+            color: #ffffff; /* Default message text color */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1 class="title">MindMash.AI <span class="testing">(Testing Mode)</span></h1>
+            <p class="tagline">Where Minds and Machines Collide</p>
+        </header>
+        <h1 class="welcome-title">Welcome, {{ display_name if display_name else username }}!</h1>
+        <div class="dashboard-grid">
+            <div class="chat-section">
+                <h2 class="section-title">Chat <span class="loading" id="loading">Gathering MINDS...</span></h2>
+                <div class="chat-box" id="chatBox"></div>
+                <div class="progress-bar">
+                    <div id="progress" style="width: 0%;"></div>
+                </div>
+                <div class="chat-input">
+                    <span class="continuity">
+                        <span class="tooltiptext">Choose an AI or 'All AIs' for collaboration, then type your message and press 'Chat'</span>
+                    </span>
+                    <select id="aiSelect" class="chat-input-field">
+                        <option value="All">All AIs (Collaborative)</option>
+                        <option value="Grok">Grok</option>
+                        <option value="ChatGPT">ChatGPT</option>
+                        <option value="Gemini">Gemini</option>
+                    </select>
+                    <input type="text" id="messageInput" placeholder="Enter your message..." class="chat-input-field">
+                    <input type="number" id="turnsInput" min="1" max="10" value="1" class="chat-turns" title="Number of AI responses per chat (max 10)">
+                    <button id="sendChat" class="button chat-button">Chat</button>
+                </div>
+            </div>
+            <div class="mode-section">
+                <h2 class="section-title">Modes</h2>
+                <div class="mode basic">
+                    <h3>Basic Mode (Free)</h3>
+                    <p>Chat with Grok, ChatGPT, and Gemini.</p>
+                </div>
+                <div class="mode premium">
+                    <h3>Premium Mode {% if not is_premium and beta_mode %}(Upgrade - Beta Unavailable){% elif not is_premium %}(Upgrade){% endif %}</h3>
+                    <p>Unlock AI debates, collaboration spaces, and more!</p>
+                    {% if not is_premium and not beta_mode %}
+                    <a href="/premium" class="button glow">Upgrade</a>
+                    {% elif not is_premium and beta_mode %}
+                    <a href="/premium" class="button glow disabled">Upgrade</a>
+                    {% endif %}
+                </div>
+                <div class="nav-buttons">
+                    <a href="/profile" class="button">Profile</a>
+                    <a href="/feedback" class="button">Feedback</a>
+                    <a href="/logout" class="button">Logout</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="/static/script.js"></script>
+</body>
+</html>

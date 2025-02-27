@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Profile - MindMash.AI</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Profile</h1>
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <p class="flash">{{ messages[0] }}</p>
+            {% endwith %}
+        <p>Username: {{ username }}</p>
+        <p>Subscription: {{ "Premium" if is_premium else "Basic" }}</p>
+        <a href="/dashboard" class="button">Back to Dashboard</a>
+    </div>
+</body>
+</html>

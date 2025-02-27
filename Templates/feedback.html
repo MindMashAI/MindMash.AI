@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Feedback - MindMash.AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1 class="title">MindMash.AI <span class="testing">(Testing Mode)</span></h1>
+            <p class="tagline">Where Minds and Machines Collide</p>
+        </header>
+
+        <h1 class="welcome-title">Welcome, {{ display_name if display_name else username }}!</h1>
+
+        <div class="mode-section feedback-section">
+            <h2 class="section-title">Feedback</h2>
+            <p class="instruction">Help us improve MindMash.AI! Share your thoughts, {{ username }}.</p>
+
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="flash-message">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <form method="POST" class="feedback-form">
+                <textarea name="feedback" class="feedback-textarea" placeholder="Enter your feedback..." required maxlength="1000" oninput="updateCounter()"></textarea>
+                <div class="char-counter">Characters left: <span id="charCount">1000</span></div>
+                <div class="form-actions">
+                    <button type="submit" class="button glow">Submit</button>
+                    <a href="{{ url_for('dashboard') }}" class="button">Back to Dashboard</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function updateCounter() {
+            const textarea = document.querySelector('.feedback-textarea');
+            const charCount = document.getElementById('charCount');
+            const maxLength = 1000;
+            const remaining = maxLength - textarea.value.length;
+            charCount.textContent = remaining;
+            if (remaining < 0) charCount.style.color = '#ff0000';
+            else charCount.style.color = '#fff';
+        }
+    </script>
+</body>
+</html>

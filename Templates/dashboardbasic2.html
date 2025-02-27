@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard - MindMash.AI</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1 class="title">MindMash.AI <span class="testing">(Testing Mode)</span></h1>
+            <p class="tagline">Where Minds and Machines Collide</p>
+        </header>
+
+        <h1 class="welcome-title">Welcome, {{ display_name if display_name else username }}!</h1>
+
+        <div class="dashboard-grid">
+            <!-- Left: Modes -->
+            <div class="mode-section">
+                <h2 class="section-title">Modes</h2>
+                <div class="mode basic">
+                    <h3>Basic Mode (Free)</h3>
+                    <p>Chat with Grok, ChatGPT, and Gemini.</p>
+                </div>
+                <div class="mode premium">
+                    <h3>Premium Mode
+                        {% if not is_premium and beta_mode %}
+                            (Upgrade - Beta Unavailable)
+                        {% elif not is_premium %}
+                            (Upgrade)
+                        {% endif %}
+                    </h3>
+                    <p>Unlock AI debates, collaboration spaces, and more!</p>
+                </div>
+                <div class="nav-buttons">
+                    <a href="/profile" class="button">Profile</a>
+                    <a href="/feedback" class="button">Feedback</a>
+                    <a href="/logout" class="button">Logout</a>
+                </div>
+                {% if not is_premium and not beta_mode %}
+                    <a href="/premium" class="button glow" style="margin-top: 10px;">Upgrade</a>
+                {% elif not is_premium and beta_mode %}
+                    <a href="/premium" class="button glow disabled" style="margin-top: 10px;">Upgrade</a>
+                {% endif %}
+            </div>
+
+            <!-- Center: Chat -->
+            <div class="chat-section">
+                <h2 class="section-title">
+                    Chat
+                    <span class="loading" id="loading">Gathering MINDS...</span>
+                </h2>
+
+                <!-- Chat Box -->
+                <div class="chat-box" id="chatBox"></div>
+
+                <!-- Progress Bar -->
+                <div class="progress-bar">
+                    <div id="progress" style="width: 0%;"></div>
+                </div>
+
+                <!-- Chat Inputs -->
+                <div class="chat-input">
+                    <select id="aiSelect" class="chat-input-field">
+                        <option value="All AIs [Collaborative]">All AIs (Collaborative)</option>
+                        <option value="Grok">Grok</option>
+                        <option value="ChatGPT">ChatGPT</option>
+                        <option value="Gemini">Gemini</option>
+                    </select>
+                    <input type="text" id="messageInput" placeholder="Enter your message..." class="chat-input-field">
+                    <input type="number" id="turnsInput" min="1" max="10" value="1" class="chat-turns" title="Number of AI responses (max 10)">
+                    <button id="sendChat" class="button chat-button">Chat</button>
+                </div>
+            </div>
+
+            <!-- Right: AI Collaboration Map -->
+            <div class="visualization-box">
+                <h2 class="section-title">AI Collaboration Map</h2>
+                <svg id="aiCollaborationMap" width="60%" height="250"></svg>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/script.js"></script>
+    <script>
+        const socket = io();
+        const svg = d3.select('#aiCollaborationMap');
+        const width = +svg.style('width').replace('px', '') || 300;
+        const height = +svg.attr('height') || 250;
+
+        const simulation = d3.forceSimulation()
+            .force('link', d3.forceLink().id(d => d.id).distance(100))
+            .force('charge', d3.forceManyBody().strength(-200))
+            .force('center', d3.forceCenter(width / 2, height / 2));
+
+        let link, node;
+
+        function updateCollabMap(data) {
+            const userName = '{{ display_name if display_name else username }}';
+            const nodes = [
+                { id: userName, color: '#ffffff' },
+                { id: 'Grok', color: '#00ffff' },
+                { id: 'ChatGPT', color: '#cc00ff' },
+                { id: 'Gemini', color: '#00ff00' }
+            ];
+            const links = data.ai_collaboration || [];
+
+            // Remove existing elements
+            svg.selectAll('*').remove();
+
+            // Create links
+            link = svg.selectAll('.link')
+                .data(links)
+                .enter().append('line')
+                .attr('class', 'link')
+                .style('stroke', '#ff00ff')
+                .style('stroke-width', 2);
+
+            // Create nodes
+            node = svg.selectAll('.node')
+                .data(nodes)
+                .enter().append('g')
+                .attr('class', 'node')
+                .call(d3.drag()
+                    .on('start', dragstarted)
+                    .on('drag', dragged)
+                    .on('end', dragended));
+
+            // Append circles with 8px radius
+            node.append('circle')
+                .attr('r', 8) // 8px radius as per document
+                .attr('fill', d => d.color);
+
+            // Append text labels beside circles
+            node.append('text')
+                .attr('dx', 12) // Offset to right of circle
+                .attr('dy', '.35em')
+                .text(d => d.id)
+                .attr('fill', '#fff')
+                .attr('x', 10); // Adjust x position to place text beside circle
+
+            // Simulation tick function
+            simulation.nodes(nodes).on('tick', () => {
+                link
+                    .attr('x1', d => d.source.x || width / 2)
+                    .attr('y1', d => d.source.y || height / 2)
+                    .attr('x2', d => d.target.x || width / 2)
+                    .attr('y2', d => d.target.y || height / 2);
+
+                node.attr('transform', d => `translate(${d.x || width / 2},${d.y || height / 2})`);
+            });
+
+            simulation.force('link').links(links);
+            simulation.alpha(1).restart();
+        }
+
+        // Drag functions for interactivity
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        // Chat handling
+        document.getElementById('sendChat').addEventListener('click', () => {
+            const ai = document.getElementById('aiSelect').value;
+            const message = document.getElementById('messageInput').value;
+            const turns = Math.min(Math.max(1, document.getElementById('turnsInput').value), 10);
+            if (message.trim()) {
+                const chatBox = document.getElementById('chatBox');
+                const msgDiv = document.createElement('div');
+                msgDiv.className = 'chat-message';
+                msgDiv.innerHTML = `<span class="speaker">{{ display_name if display_name else username }}:</span> <span class="message-content">${message}</span>`;
+                msgDiv.style.color = '#ffffff';
+                chatBox.appendChild(msgDiv);
+                chatBox.scrollTop = chatBox.scrollHeight;
+                socket.emit('chat_message', { ai, message, turns });
+                document.getElementById('messageInput').value = '';
+                document.getElementById('loading').style.display = 'block';
+                document.getElementById('progress').style.width = '0%';
+            }
+        });
+
+        socket.on('chat_response', (data) => {
+            const chatBox = document.getElementById('chatBox');
+            const loading = document.getElementById('loading');
+            const progress = document.getElementById('progress');
+            if (data.type === 'system') {
+                const msgDiv = document.createElement('div');
+                msgDiv.className = 'chat-message';
+                msgDiv.innerHTML = `<span class="speaker">System:</span> <span class="message-content">${data.message}</span>`;
+                msgDiv.style.color = '#ffff00';
+                chatBox.appendChild(msgDiv);
+                progress.style.width = '0%';
+                loading.style.display = 'inline';
+            } else if (data.type === 'typing') {
+                const msgDiv = document.createElement('div');
+                msgDiv.className = 'chat-message';
+                msgDiv.innerHTML = `<span class="speaker">${data.speaker}:</span> <span class="message-content">is typing...</span>`;
+                msgDiv.style.color = '#888';
+                chatBox.appendChild(msgDiv);
+            } else if (data.type === 'ai') {
+                const lastMsg = chatBox.lastElementChild;
+                if (lastMsg && lastMsg.textContent.includes('is typing...')) {
+                    chatBox.removeChild(lastMsg);
+                }
+                const msgDiv = document.createElement('div');
+                msgDiv.className = 'chat-message';
+                let color = '#888';
+                if (data.speaker === 'Grok') color = '#00ffff';
+                else if (data.speaker === 'ChatGPT') color = '#cc00ff';
+                else if (data.speaker === 'Gemini') color = '#00ff00';
+                msgDiv.innerHTML = `<span class="speaker">${data.speaker}:</span> <span class="message-content">${data.message || 'No response'}</span>`;
+                msgDiv.style.color = color;
+                if (data.emotion) msgDiv.classList.add(data.emotion.toLowerCase());
+                chatBox.appendChild(msgDiv);
+                progress.style.width = `${(data.progress || 0) * 100}%`;
+                document.getElementById('mood-ring').style.backgroundColor = {
+                    'joy': '#ffff00',
+                    'sadness': '#0000ff',
+                    'anger': '#ff0000',
+                    'fear': '#800080',
+                    'disgust': '#008000',
+                    'neutral': '#888'
+                }[data.emotion] || '#888';
+                loading.style.display = 'none';
+            }
+            chatBox.scrollTop = chatBox.scrollHeight;
+        });
+
+        socket.on('visualization_update', (data) => {
+            document.getElementById('loading').style.display = 'none';
+            updateCollabMap(data);
+
+            const chatBox = document.getElementById('chatBox');
+            chatBox.innerHTML = '';
+            (data.heat_map_tints || []).forEach(msg => {
+                const div = document.createElement('div');
+                div.className = 'chat-message';
+                div.style.backgroundColor = msg.tint || 'rgba(128, 128, 128, 0.2)';
+                div.innerHTML = msg.message;
+                chatBox.appendChild(div);
+            });
+            chatBox.scrollTop = chatBox.scrollHeight;
+        });
+    </script>
+</body>
+</html>

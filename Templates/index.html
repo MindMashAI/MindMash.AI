@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MindMash.AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1 class="title">MindMash.AI <span class="testing">(Testing Mode)</span></h1>
+            <p class="tagline">Where Minds and Machines Collide</p>
+        </header>
+        <div class="welcome-title" style="text-align: center;">
+            <p>Welcome to MindMash.AI! Connect with advanced AI models to collaborate and innovate.</p>
+            <a href="{{ url_for('login') }}" class="button glow" style="display: inline-block; margin-top: 20px;">Login with Google</a>
+            <p style="margin-top: 10px;">Don't have an account? <a href="{{ url_for('signup') }}">Sign Up</a></p>
+        </div>
+    </div>
+</body>
+</html>

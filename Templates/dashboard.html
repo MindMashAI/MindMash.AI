@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - MindMash.AI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1 class="title">MindMash.AI <span class="testing">(Testing Mode)</span></h1>
+            <p class="tagline">Where Minds and Machines Collide</p>
+        </header>
+
+        <h1 class="welcome-title">Welcome, {{ display_name if display_name else username if username else 'User' }}!</h1>
+
+        <div class="dashboard-grid">
+            <!-- Left: Modes -->
+            <div class="mode-section">
+                <h2 class="section-title">Modes</h2>
+                <div class="mode basic">
+                    <h3>Basic Mode (Free)</h3>
+                    <p>Chat with Grok, ChatGPT, and Gemini.</p>
+                </div>
+                <div class="mode premium">
+                    <h3>Premium Mode
+                        {% if not is_premium and beta_mode %}
+                            (Upgrade - Beta Unavailable)
+                        {% elif not is_premium %}
+                            (Upgrade)
+                        {% endif %}
+                    </h3>
+                    <p>Unlock AI debates, collaboration spaces, and more!</p>
+                </div>
+                <div class="nav-buttons">
+                    <a href="/profile" class="button">Profile</a>
+                    <a href="/feedback" class="button">Feedback</a>
+                    <a href="/logout" class="button">Logout</a>
+                </div>
+                {% if not is_premium and not beta_mode %}
+                    <a href="/premium" class="button glow" style="margin-top: 10px;">Upgrade</a>
+                {% elif not is_premium and beta_mode %}
+                    <a href="/premium" class="button glow disabled" style="margin-top: 10px;">Upgrade</a>
+                {% endif %}
+            </div>
+
+            <!-- Center: Chat -->
+            <div class="chat-section">
+                <h2 class="section-title">
+                    Chat
+                    <span class="loading" id="loading">Gathering MINDS...</span>
+                </h2>
+
+                <!-- Mood Ring -->
+                <div id="mood-ring"></div>
+
+                <!-- Chat Box -->
+                <div class="chat-box" id="chatBox"></div>
+
+                <!-- Progress Bar -->
+                <div class="progress-bar">
+                    <div id="progress" style="width: 0%;"></div>
+                </div>
+
+                <!-- Chat Inputs -->
+                <div class="chat-input">
+                    <select id="aiSelect" class="chat-input-field">
+                        <option value="All AIs [Collaborative]">All AIs (Collaborative)</option>
+                        <option value="Grok">Grok</option>
+                        <option value="ChatGPT">ChatGPT</option>
+                        <option value="Gemini">Gemini</option>
+                    </select>
+                    <input type="text" id="messageInput" placeholder="Enter your message..." class="chat-input-field">
+                    <select id="toneSelect" class="chat-input-field" onchange="setTonePreference()">
+                        <option value="casual">Casual</option>
+                        <option value="formal">Formal</option>
+                        <option value="technical">Technical</option>
+                    </select>
+                    <input type="number" id="turnsInput" min="1" max="10" value="1" class="chat-turns" title="Number of AI responses (max 10)">
+                    <button id="sendChat" class="button chat-button">Chat</button>
+                </div>
+            </div>
+
+            <!-- Right: AI Collaboration Map -->
+            <div class="visualization-box">
+                <h2 class="section-title">AI Collaboration Map</h2>
+                <div id="aiCollaborationMap"><svg width="100%" height="250"></svg></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        const svg = d3.select('#aiCollaborationMap svg');
+        const width = svg.node().getBoundingClientRect().width - 40;
+        const height = 250 - 40;
+
+        const simulation = d3.forceSimulation()
+            .force('link', d3.forceLink().id(d => d.id).distance(100).strength(1)) // Ensure straight links
+            .force('charge', d3.forceManyBody().strength(-200))
+            .force('center', d3.forceCenter(width / 2, height / 2))
+            .force('x', d3.forceX(width / 2).strength(0.1))
+            .force('y', d3.forceY(height / 2).strength(0.1));
+
+        let link, node;
+        const userName = '{{ display_name if display_name else username if username else "User" }}';
+        let nodes = [
+            { id: userName, color: '#ffffff', x: 100, y: 100 },
+            { id: 'Grok', color: '#00ffff', x: 200, y: 100 },
+            { id: 'ChatGPT', color: '#cc00ff', x: 300, y: 100 },
+            { id: 'Gemini', color: '#00ff00', x: 400, y: 100 }
+        ];
+        let links = [];
+
+        function updateCollaborationMap(data) {
+            svg.selectAll('*').remove();
+
+            // Create links with straight paths
+            link = svg.selectAll('.link')
+                .data(data.ai_collaboration || [])
+                .enter().append('line')
+                .attr('class', 'link')
+                .style('stroke', '#ff00ff')
+                .style('stroke-width', 2)
+                .attr('x1', d => Math.max(20, Math.min(width - 20, d.source.x || width / 2)))
+                .attr('y1', d => Math.max(20, Math.min(height - 20, d.source.y || height / 2)))
+                .attr('x2', d => Math.max(20, Math.min(width - 20, d.target.x || width / 2)))
+                .attr('y2', d => Math.max(20, Math.min(height - 20, d.target.y || height / 2)));
+
+            // Create nodes with constrained positions
+            node = svg.selectAll('.node')
+                .data(data.nodes || nodes)
+                .enter().append('g')
+                .attr('class', 'node')
+                .attr('transform', d => `translate(${Math.max(20, Math.min(width - 20, d.x || (width / 2)))},${Math.max(20, Math.min(height - 20, d.y || (height / 2)))})`);
+
+            node.append('circle')
+                .attr('r', 8) // 8px radius
+                .attr('fill', d => d.color);
+
+            node.append('text')
+                .attr('dx', 12)
+                .attr('dy', '.35em')
+                .text(d => d.id)
+                .attr('fill', '#fff')
+                .attr('x', 10);
+
+            // Handle drag, click, and hover interactivity
+            node.call(d3.drag()
+                .on('start', dragstarted)
+                .on('drag', dragged)
+                .on('end', dragended))
+                .on('click', function(event, d) {
+                    socket.emit('node_click', { speaker: d.id });
+                })
+                .on('mouseover', function(event, d) {
+                    d3.select(this).select('circle').attr('r', 12);
+                    d3.select(this).select('text').attr('font-size', '1.1em');
+                })
+                .on('mouseout', function(event, d) {
+                    d3.select(this).select('circle').attr('r', 8);
+                    d3.select(this).select('text').attr('font-size', '1em');
+                });
+
+            link.on('mouseover', function(event, d) {
+                d3.select(this).style('stroke-width', 3);
+            }).on('mouseout', function(event, d) {
+                d3.select(this).style('stroke-width', 2);
+            });
+
+            simulation.nodes(data.nodes || nodes).on('tick', () => {
+                node.attr('transform', d => {
+                    d.x = Math.max(20, Math.min(width - 20, d.x));
+                    d.y = Math.max(20, Math.min(height - 20, d.y));
+                    return `translate(${d.x},${d.y})`;
+                });
+                link
+                    .attr('x1', d => Math.max(20, Math.min(width - 20, d.source.x || width / 2)))
+                    .attr('y1', d => Math.max(20, Math.min(height - 20, d.source.y || height / 2)))
+                    .attr('x2', d => Math.max(20, Math.min(width - 20, d.target.x || width / 2)))
+                    .attr('y2', d => Math.max(20, Math.min(height - 20, d.target.y || height / 2)));
+            });
+
+            simulation.force('link').links(data.ai_collaboration || links);
+            simulation.alpha(1).restart();
+        }
+
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+            socket.emit('node_drag', { speaker: d.id, x: d.x, y: d.y });
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+            socket.emit('node_drag', { speaker: d.id, x: event.x, y: event.y });
+            d3.select(this).attr('transform', `translate(${event.x},${event.y})`);
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0).restart();
+            d.fx = null;
+            d.fy = null;
+            socket.emit('node_drag', { speaker: d.id, x: d.x, y: d.y });
+        }
+
+        // Chat handling
+        document.getElementById('sendChat').addEventListener('click', () => {
+            const ai = document.getElementById('aiSelect').value;
+            const message = document.getElementById('messageInput').value;
+            const turns = Math.min(Math.max(1, document.getElementById('turnsInput').value), 10);
+            if (message.trim()) {
+                const chatBox = document.getElementById('chatBox');
+                const msgDiv = document.createElement('div');
+                msgDiv.className = 'chat-message';
+                msgDiv.innerHTML = `<span class="speaker">{{ display_name if display_name else username }}:</span> <span class="message-content">${message}</span>`;
+                msgDiv.style.color = '#ffffff';
+                chatBox.appendChild(msgDiv);
+                chatBox.scrollTop = chatBox.scrollHeight;
+                socket.emit('chat_message', { ai, message, turns });
+                document.getElementById('messageInput').value = '';
+                document.getElementById('loading').style.display = 'block';
+                document.getElementById('progress').style.width = '0%';
+            }
+        });
+
+        // Add Enter key functionality
+        document.getElementById('messageInput').addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault(); // Prevent new line
+                const ai = document.getElementById('aiSelect').value;
+                const message = document.getElementById('messageInput').value;
+                const turns = Math.min(Math.max(1, document.getElementById('turnsInput').value), 10);
+                if (message.trim()) {
+                    const chatBox = document.getElementById('chatBox');
+                    const msgDiv = document.createElement('div');
+                    msgDiv.className = 'chat-message';
+                    msgDiv.innerHTML = `<span class="speaker">{{ display_name if display_name else username }}:</span> <span class="message-content">${message}</span>`;
+                    msgDiv.style.color = '#ffffff';
+                    chatBox.appendChild(msgDiv);
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                    socket.emit('chat_message', { ai, message, turns });
+                    document.getElementById('messageInput').value = '';
+                    document.getElementById('loading').style.display = 'block';
+                    document.getElementById('progress').style.width = '0%';
+                }
+            }
+        });
+
+        socket.on('chat_response', (data) => {
+            const chatBox = document.getElementById('chatBox');
+            const loading = document.getElementById('loading');
+            const progress = document.getElementById('progress');
+            if (data.type === 'system') {
+                const msgDiv = document.createElement('div');
+                msgDiv.className = 'chat-message';
+                msgDiv.innerHTML = `<span class="speaker">System:</span> <span class="message-content">${data.message}</span>`;
+                msgDiv.style.color = '#ffff00';
+                chatBox.appendChild(msgDiv);
+                progress.style.width = '0%';
+                loading.style.display = 'inline';
+            } else if (data.type === 'typing') {
+                const msgDiv = document.createElement('div');
+                msgDiv.className = 'chat-message';
+                msgDiv.innerHTML = `<span class="speaker">${data.speaker}:</span> <span class="message-content">is typing...</span>`;
+                msgDiv.style.color = '#888';
+                chatBox.appendChild(msgDiv);
+            } else if (data.type === 'ai') {
+                const lastMsg = chatBox.lastElementChild;
+                if (lastMsg && lastMsg.textContent.includes('is typing...')) {
+                    chatBox.removeChild(lastMsg);
+                }
+                const msgDiv = document.createElement('div');
+                msgDiv.className = 'chat-message';
+                let color = '#888';
+                if (data.speaker === 'Grok') color = '#00ffff';
+                else if (data.speaker === 'ChatGPT') color = '#cc00ff';
+                else if (data.speaker === 'Gemini') color = '#00ff00';
+                msgDiv.innerHTML = `<span class="speaker">${data.speaker}:</span> <span class="message-content">${data.message || 'No response'}</span>`;
+                msgDiv.style.color = color;
+                if (data.emotion) {
+                    const emotionIcon = {
+                        'joy': '<i class="fas fa-smile"></i>',
+                        'sadness': '<i class="fas fa-frown"></i>',
+                        'anger': '<i class="fas fa-angry"></i>',
+                        'fear': '<i class="fas fa-surprise"></i>',
+                        'disgust': '<i class="fas fa-meh"></i>',
+                        'neutral': '<i class="fas fa-meh-blank"></i>'
+                    }[data.emotion.toLowerCase()];
+                    const emotionColor = {
+                        'joy': 'rgba(255, 255, 0, 0.2)',
+                        'sadness': 'rgba(0, 0, 255, 0.2)',
+                        'anger': 'rgba(255, 0, 0, 0.2)',
+                        'fear': 'rgba(128, 0, 128, 0.2)',
+                        'disgust': 'rgba(0, 128, 0, 0.2)',
+                        'neutral': 'rgba(128, 128, 128, 0.2)'
+                    }[data.emotion.toLowerCase()];
+                    msgDiv.innerHTML += ` ${emotionIcon}`;
+                    msgDiv.style.backgroundColor = emotionColor || 'rgba(128, 128, 128, 0.2)';
+                }
+                msgDiv.innerHTML += `<button onclick="pinMessage('${data.message}')">Pin</button>`;
+                chatBox.appendChild(msgDiv);
+                // Limit to last 20 messages
+                if (chatBox.children.length > 20) {
+                    chatBox.removeChild(chatBox.firstChild);
+                }
+                progress.style.width = `${(data.progress || 0) * 100}%`;
+                document.getElementById('mood-ring').style.backgroundColor = {
+                    'joy': '#ffff00',
+                    'sadness': '#0000ff',
+                    'anger': '#ff0000',
+                    'fear': '#800080',
+                    'disgust': '#008000',
+                    'neutral': '#888'
+                }[data.emotion] || '#888';
+                loading.style.display = 'none';
+            }
+            chatBox.scrollTop = chatBox.scrollHeight;
+        });
+
+        socket.on('visualization_update', (data) => {
+            document.getElementById('loading').style.display = 'none';
+            updateCollaborationMap(data);
+
+            const chatBox = document.getElementById('chatBox');
+            // Append heat_map_tints without clearing existing messages
+            (data.heat_map_tints || []).forEach(msg => {
+                const div = document.createElement('div');
+                div.className = 'chat-message';
+                div.style.backgroundColor = msg.tint || 'rgba(128, 128, 128, 0.2)';
+                div.innerHTML = msg.message;
+                chatBox.appendChild(div);
+            });
+            // Limit to last 20 messages
+            while (chatBox.children.length > 20) {
+                chatBox.removeChild(chatBox.firstChild);
+            }
+            chatBox.scrollTop = chatBox.scrollHeight;
+        });
+
+        socket.on('map_interactivity', (data) => {
+            nodes = data.nodes || nodes;
+            links = data.links || links;
+            updateCollaborationMap({ nodes: nodes, ai_collaboration: links });
+        });
+
+        socket.on('map_update', (data) => {
+            const node = svg.selectAll('.node').filter(d => d.id === data.speaker);
+            const nodeData = node.data()[0] || { id: data.speaker, color: '#ffffff' };
+            node.data([{ ...nodeData, x: Math.max(20, Math.min(width - 20, data.x)), y: Math.max(20, Math.min(height - 20, data.y)) }], d => d.id)
+                .attr('transform', d => `translate(${d.x},${d.y})`);
+            simulation.alpha(0.3).restart();
+        });
+
+        socket.on('node_click', (data) => {
+            const chatBox = document.getElementById('chatBox');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'chat-message';
+            msgDiv.innerHTML = `<span class="speaker">System:</span> <span class="message-content">${data.message}</span>`;
+            msgDiv.style.color = '#ffff00';
+            chatBox.appendChild(msgDiv);
+            // Limit to last 20 messages
+            if (chatBox.children.length > 20) {
+                chatBox.removeChild(chatBox.firstChild);
+            }
+            if (data.message === 'Which AI helped most? Click their name on the map.') {
+                node.each(function(d) {
+                    d3.select(this).on('click.feedback', function() {
+                        socket.emit('submit_feedback', { chosen_ai: d.id });
+                        d3.select(this).on('click.feedback', null);
+                        const feedbackMsg = chatBox.lastElementChild;
+                        if (feedbackMsg) feedbackMsg.remove();
+                    });
+                });
+            }
+            chatBox.scrollTop = chatBox.scrollHeight;
+        });
+
+        function pinMessage(message) {
+            socket.emit('pin_message', { message: message });
+        }
+
+        function setTonePreference() {
+            const tone = document.getElementById('toneSelect').value;
+            socket.emit('set_tone_preference', { tone: tone });
+        }
+    </script>
+</body>
+</html>
+
+
+
+
+
+
+
+

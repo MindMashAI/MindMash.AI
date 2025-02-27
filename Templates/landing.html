@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MindMash.AI (Testing Mode)</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body class="landing">
+    <div class="container">
+        <header class="header">
+            <h1 class="title">MindMash.AI <span class="testing">(Testing Mode)</span></h1>
+            <p class="tagline">Where Minds and Machines Collide</p>
+        </header>
+
+        <div class="demo">
+            <img src="{{ url_for('static', filename='ai_chat.gif') }}" alt="AI Chat Demo" class="demo-gif" onerror="this.src='https://via.placeholder.com/300x200?text=Demo+Image+Not+Found';">
+        </div>
+
+        <div class="intro">
+            <p>Chat, debate, and collaborate with AI minds—Grok, ChatGPT, and Gemini</p>
+            <p>Unlock Premium for advanced AI debates, collaboration spaces, and more!</p>
+            <div class="button-group">
+                <a href="{{ url_for('login') }}?signup=1" class="button">Sign Up</a>
+                <a href="{{ url_for('login') }}" class="button">Sign In</a>
+            </div>
+        </div>
+
+        <footer class="footer">
+            <p>
+                © 2025 
+                <a href="{{ url_for('privacy') }}" class="footer-link">MindMash.AI</a> | 
+                <a href="{{ url_for('privacy') }}" class="footer-link">Privacy Policy</a> | 
+                <a href="{{ url_for('terms') }}" class="footer-link">Terms of Service</a>
+            </p>
+        </footer>
+    </div>
+</body>
+</html>

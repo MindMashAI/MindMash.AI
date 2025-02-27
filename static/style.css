@@ -1,0 +1,531 @@
+/* Import Orbitron font for a futuristic appearance */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+
+/* Reset & Base */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background: linear-gradient(45deg, #000 0%, #111 100%);
+    font-family: 'Orbitron', sans-serif;
+    color: #fff;
+    overflow-y: auto;
+}
+
+/* Common Container */
+.container {
+    max-width: 1800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Header (Common to all pages) */
+.header {
+    text-align: center;
+    padding: 20px 0;
+}
+.title {
+    font-size: 2.5em;
+    color: #00ffff;
+    text-shadow: 0 0 10px #00ffff;
+}
+.title .testing {
+    font-size: 0.6em;
+    color: #ff00ff;
+    text-shadow: 0 0 5px #ff00ff;
+    margin-left: 0.5rem;
+}
+.tagline {
+    font-size: 1.2em;
+    color: #ccc;
+}
+
+/* Welcome Title (Common to all pages) */
+.welcome-title {
+    font-size: 1.5em;
+    color: #00ffff;
+    text-shadow: 0 0 10px #00ffff;
+    text-align: center;
+    margin: 15px 0;
+}
+
+/* Dashboard-specific Styles */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr 2.8fr 1fr;
+    gap: 20px;
+    align-items: stretch;
+    margin: 20px 0;
+}
+
+.mode-section,
+.chat-section,
+.visualization-box,
+.profile-section,
+.feedback-section,
+.edit-profile-section {
+    background: rgba(10, 10, 10, 0.95);
+    border: 2px solid #00ffff;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 0 10px #00ffff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.section-title {
+    font-size: 1.8em;
+    color: #00ffff;
+    text-shadow: 0 0 10px #00ffff;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+}
+
+.section-subtitle {
+    font-size: 1.4em;
+    color: #00ffff;
+    text-shadow: 0 0 5px #00ffff;
+    margin-top: 20px;
+    margin-bottom: 10px;
+}
+
+.mode {
+    margin-bottom: 20px;
+    text-align: center;
+    width: 100%;
+}
+.mode h3 {
+    font-size: 1.2em;
+    color: #00ffff;
+}
+.mode p {
+    font-size: 1em;
+    color: #fff;
+}
+.button {
+    padding: 10px 20px;
+    background: #ff00ff;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin: 5px 0;
+    width: 100%;
+    text-align: center;
+    text-decoration: none;
+    transition: box-shadow 0.3s ease;
+}
+.button.glow {
+    box-shadow: 0 0 10px #ff00ff;
+}
+.button:hover {
+    box-shadow: 0 0 15px #ff00ff;
+}
+.button.disabled {
+    background: #555;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+.nav-buttons {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.profile-layout {
+    display: flex;
+    gap: 20px;
+    width: 100%;
+    justify-content: space-between;
+}
+
+.profile-card {
+    flex: 1;
+    min-width: 0;
+}
+
+.profile-details,
+.social-features {
+    margin-bottom: 20px;
+    width: 100%;
+}
+.profile-details p,
+.social-features .collapsible-section {
+    margin: 10px 0;
+    padding: 10px;
+    background: rgba(20, 20, 20, 0.9);
+    border: 1px solid #00ffff;
+    border-radius: 5px;
+    box-shadow: 0 0 5px #00ffff;
+    transition: transform 0.2s ease;
+}
+.profile-details p:hover,
+.social-features .collapsible-section:hover {
+    transform: translateY(-2px);
+}
+
+.social-features .collapsible-section {
+    overflow: hidden;
+}
+.collapsible-title {
+    cursor: pointer;
+    font-size: 1.2em;
+    color: #00ffff;
+    text-shadow: 0 0 5px #00ffff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.toggle {
+    font-size: 0.9em;
+    color: #ff00ff;
+}
+.friends-list,
+.activity-log {
+    list-style: none;
+    padding-left: 0;
+    margin-top: 5px;
+}
+.friends-list li,
+.activity-log li {
+    margin-bottom: 5px;
+    color: #ccc;
+}
+.friends-list li a {
+    color: #ff00ff;
+    text-decoration: none;
+}
+.friends-list li a:hover {
+    color: #00ffff;
+    text-decoration: underline;
+}
+
+.profile-actions,
+.form-actions {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.flash-message {
+    margin: 10px 0;
+    padding: 10px;
+    background: rgba(255, 215, 0, 0.1);
+    border: 1px solid #ffff00;
+    border-radius: 5px;
+    color: #ffff00;
+    text-align: center;
+    animation: flash 1s ease-out;
+}
+
+.instruction {
+    font-size: 1.1em;
+    color: #ccc;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.feedback-form,
+.edit-profile-form {
+    width: 100%;
+    max-width: 600px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.feedback-textarea,
+.edit-input {
+    width: 100%;
+    min-height: 200px;
+    font-size: 1.1em;
+    padding: 10px;
+    margin-bottom: 10px;
+    resize: vertical;
+    border: 1px solid #00ffff;
+    border-radius: 5px;
+    background: #111;
+    color: #fff;
+    box-shadow: 0 0 5px #00ffff;
+    transition: box-shadow 0.3s ease;
+}
+.edit-input {
+    min-height: auto;
+    height: 40px;
+}
+.feedback-textarea:focus,
+.edit-input:focus {
+    box-shadow: 0 0 10px #00ffff;
+}
+
+.char-counter {
+    font-size: 0.9em;
+    color: #fff;
+    margin-bottom: 15px;
+    text-align: right;
+    width: 100%;
+}
+
+.form-label {
+    font-size: 1.2em;
+    color: #00ffff;
+    text-shadow: 0 0 5px #00ffff;
+    margin-bottom: 10px;
+    display: block;
+    text-align: center;
+}
+
+.chat-box {
+    height: 450px;
+    overflow-y: auto;
+    margin-bottom: 20px;
+    border: 1px solid #00ffff;
+    padding: 10px;
+    background: #000;
+    width: 100%;
+}
+
+.chat-message {
+    margin: 10px 0;
+    padding: 8px;
+    border: 1px solid #ff00ff;
+    border-radius: 5px;
+    box-shadow: 0 0 5px #00ffff;
+    transition: background-color 0.3s ease;
+}
+.chat-message .speaker {
+    font-weight: bold;
+}
+.chat-message.grok .speaker { color: #00ffff; }
+.chat-message.chatgpt .speaker { color: #cc00ff; }
+.chat-message.gemini .speaker { color: #00ff00; }
+.chat-message.user .speaker { color: #ffffff; }
+.chat-message.system .speaker { color: #ffff00; }
+.chat-message .message-content {
+    color: #ffffff;
+    margin-left: 0.5rem;
+}
+.chat-message.joy { background-color: rgba(255, 255, 0, 0.2); }
+.chat-message.sadness { background-color: rgba(30, 30, 230, 0.2); }
+.chat-message.anger { background-color: rgba(223, 22, 22, 0.2); }
+.chat-message.fear { background-color: rgba(206, 15, 206, 0.2); }
+.chat-message.disgust { background-color: rgba(16, 221, 16, 0.2); }
+.chat-message.neutral { background-color: rgba(231, 229, 229, 0.2); }
+
+.progress-bar {
+    width: 100%;
+    height: 10px;
+    background: #0a0a0a;
+    border: 1px solid #ff00ff;
+    margin: 10px 0;
+    border-radius: 5px;
+}
+#progress {
+    height: 100%;
+    background: linear-gradient(90deg, #00ffff, #ff00ff);
+    transition: width 0.5s ease;
+    border-radius: 5px;
+}
+
+.chat-input {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+    justify-content: space-between;
+}
+.chat-input select,
+.chat-input input,
+.chat-input button {
+    padding: 10px;
+    font-size: 1em;
+    border: 1px solid #00ffff;
+    border-radius: 5px;
+    background: #111;
+    color: #fff;
+    flex: 1;
+}
+.chat-input button {
+    background: #ff00ff;
+    cursor: pointer;
+}
+
+.loading {
+    display: none;
+    color: #ff00ff;
+    text-shadow: 0 0 10px #ff00ff;
+    font-size: 0.8em;
+    margin-left: 10px;
+}
+
+.visualization-box {
+    text-align: center;
+    width: 100%;
+}
+#aiCollaborationMap {
+    width: 100%;
+    height: 250px;
+}
+
+/* Map Interactivity Styles */
+.node circle {
+    cursor: move;
+    transition: r 0.2s ease;
+}
+.node circle:hover {
+    r: 12; /* Slightly larger on hover */
+}
+.node text {
+    pointer-events: none;
+    transition: font-size 0.2s ease;
+}
+.node text:hover {
+    font-size: 1.1em;
+}
+.link {
+    stroke: #ff00ff;
+    stroke-width: 2;
+    transition: stroke-width 0.2s ease;
+}
+.link:hover {
+    stroke-width: 3;
+}
+
+/* Landing-specific Styles */
+body.landing {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+body.landing .container {
+    flex: 1 0 auto;
+}
+
+body.landing .intro {
+    text-align: center;
+    margin: 40px 0;
+    padding: 20px;
+    border: 2px solid #00ffff;
+    border-radius: 10px;
+    box-shadow: 0 0 10px #00ffff;
+    background: rgba(10, 10, 10, 0.95);
+}
+
+body.landing .intro p {
+    font-size: 1.2em;
+    margin-bottom: 15px;
+    color: #fff;
+}
+
+body.landing .button-group {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+}
+
+body.landing .button {
+    padding: 10px 20px;
+    background: #ff00ff;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    text-align: center;
+    text-decoration: none;
+    box-shadow: 0 0 10px #ff00ff;
+    display: inline-block;
+}
+
+body.landing .button:hover {
+    box-shadow: 0 0 15px #ff00ff;
+}
+
+body.landing .demo {
+    text-align: center;
+    margin: 40px 0;
+}
+
+body.landing .demo-gif {
+    max-width: 100%;
+    height: auto;
+    border: 2px solid #00ffff;
+    border-radius: 10px;
+    box-shadow: 0 0 10px #00ffff;
+}
+
+body.landing .footer {
+    text-align: center;
+    padding: 20px 0;
+    border-top: 2px solid #00ffff;
+    box-shadow: 0 0 10px #00ffff;
+    background: rgba(10, 10, 10, 0.95);
+    flex-shrink: 0;
+    margin-top: auto;
+}
+
+body.landing .footer-link {
+    color: #ff00ff;
+    text-decoration: none;
+    margin: 0 10px;
+}
+
+body.landing .footer-link:hover {
+    text-decoration: underline;
+    color: #00ffff;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+    .chat-input {
+        flex-direction: column;
+    }
+    .chat-input select,
+    .chat-input input,
+    .chat-input button {
+        width: 100%;
+    }
+    body.landing .intro {
+        margin: 20px 0;
+        padding: 10px;
+    }
+    body.landing .button-group {
+        flex-direction: column;
+        gap: 10px;
+    }
+    body.landing .demo-gif {
+        max-width: 90%;
+    }
+    body.landing .footer {
+        padding: 10px 0;
+    }
+    .profile-layout {
+        flex-direction: column;
+    }
+    .feedback-form,
+    .edit-profile-form {
+        max-width: 100%;
+    }
+    .feedback-textarea,
+    .edit-input {
+        min-height: 150px;
+    }
+    .node circle:hover {
+        r: 10; /* Adjust hover size for smaller screens */
+    }
+}
+
+@keyframes flash {
+    0% { opacity: 0; }
+    50% { opacity: 1; }
+    100% { opacity: 0; }
+}
