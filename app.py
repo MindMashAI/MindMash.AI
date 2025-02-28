@@ -15,6 +15,7 @@ from ibm_watson import NaturalLanguageUnderstandingV1
 from ibm_watson.natural_language_understanding_v1 import Features, KeywordsOptions, SentimentOptions, EmotionOptions
 from ibm_cloud_sdk_core.authenticators import IAMAuthenticator
 from flask_sslify import SSLify
+from uuid import uuid4
 
 # Load environment variables
 load_dotenv()
@@ -436,13 +437,13 @@ def landing():
 
 @app.route("/login")
 def login():
-    redirect_uri = url_for("authorize", _external=True, _scheme="https")
-    return oauth.google.authorize_redirect(redirect_uri)
+    session["nonce"] = str(uuid4())  # Generate and store nonce
+    return oauth.google.authorize_redirect(REDIRECT_URI)
 
 @app.route("/login/callback")
 def authorize():
     token = oauth.google.authorize_access_token()
-    user_info = oauth.google.parse_id_token(token)
+   user_info = oauth.google.parse_id_token(token, nonce=session.get('nonce'))
     
     if not user_info:
         flash("Google authentication failed. Please try again.", "danger")
