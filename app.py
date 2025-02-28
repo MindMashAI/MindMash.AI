@@ -439,12 +439,10 @@ def login():
     """Initiate Google OAuth login process."""
     nonce = os.urandom(16).hex()  # Generate a secure nonce
     session["nonce"] = nonce  # Store nonce in session
-
     redirect_uri = url_for("authorize", _external=True, _scheme="https")
-    return oauth.google.authorize_redirect(redirect_uri, nonce=nonce)
+    
 @app.route("/login/callback")
 def authorize():
-    """Handle the OAuth callback from Google."""
     try:
         token = oauth.google.authorize_access_token()
         logger.info(f"OAuth Token Response: {token}")
@@ -454,13 +452,7 @@ def authorize():
             return redirect(url_for("login"))
 
         nonce = session.pop("nonce", None)  # Retrieve nonce from session
-        
-        if not nonce:
-            logger.error("Missing nonce in session! Possible CSRF attack or session expiry.")
-            flash("Authentication error. Please try again.", "danger")
-            return redirect(url_for("login"))
-
-        user_info = oauth.google.parse_id_token(token, nonce=nonce)
+        user_info = oauth.google.parse_id_token(token, nonce=nonce)  # Proper indentation
         logger.info(f"User Info: {user_info}")
 
         if not user_info:
@@ -470,7 +462,6 @@ def authorize():
         session["username"] = user_info.get("email")
         session["display_name"] = user_info.get("name")
 
-        # Store user in DB if not exists
         with get_db_connection() as conn:
             user = conn.execute("SELECT username FROM users WHERE username = ?", (session["username"],)).fetchone()
             if not user:
@@ -482,15 +473,15 @@ def authorize():
         return redirect(url_for("dashboard"))
 
     except Exception as e:
-        logger.error(f"OAuth Authorization Error: {e}")
+        logger.error(f"Google OAuth Error: {e}")
         flash("An error occurred during authentication. Please try again.", "danger")
         return redirect(url_for("login"))
+
 
     except Exception as e:
         logger.error(f"OAuth Callback Error: {e}")
         flash(f"An error occurred: {e}", "danger")  # Display error
         return redirect(url_for("login"))
-
 
 @app.route("/logout")
 def logout():
