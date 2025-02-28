@@ -35,17 +35,20 @@ beta_mode = True
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
 REDIRECT_URI = "https://mindmash.ai/login/callback"
+
 oauth = OAuth(app)
+
 google = oauth.register(
     name="google",
     client_id=GOOGLE_CLIENT_ID,
     client_secret=GOOGLE_CLIENT_SECRET,
     authorize_url="https://accounts.google.com/o/oauth2/auth",
-    authorize_params=None,
-    access_token_url="https://accounts.google.com/o/oauth2/token",
+    access_token_url="https://oauth2.googleapis.com/token",
     access_token_params=None,
-    client_kwargs={"scope": "openid email profile"},
+    authorize_params=None,
     redirect_uri=REDIRECT_URI,
+    client_kwargs={"scope": "openid email profile"},
+    server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",  # ✅ Explicitly set metadata URL
 )
 # API Keys (loaded from .env)
 XAI_API_KEY = os.getenv("XAI_API_KEY")
