@@ -452,7 +452,7 @@ def authorize():
             return redirect(url_for("login"))
 
         nonce = session.pop("nonce", None)  # Retrieve nonce from session
-        user_info = oauth.google.parse_id_token(token, nonce=nonce)  # Proper indentation
+        user_info = oauth.google.parse_id_token(token, nonce=nonce)  # Correct indentation
         logger.info(f"User Info: {user_info}")
 
         if not user_info:
@@ -477,11 +477,6 @@ def authorize():
         flash("An error occurred during authentication. Please try again.", "danger")
         return redirect(url_for("login"))
 
-
-    except Exception as e:
-        logger.error(f"OAuth Callback Error: {e}")
-        flash(f"An error occurred: {e}", "danger")  # Display error
-        return redirect(url_for("login"))
 
 @app.route("/logout")
 def logout():
