@@ -434,7 +434,7 @@ def landing():
 def login():
     redirect_uri = url_for("authorize", _external=True, _scheme="https")
     return oauth.google.authorize_redirect(redirect_uri)
-)
+
 @app.route("/login/callback")
 def authorize():
     token = oauth.google.authorize_access_token()
