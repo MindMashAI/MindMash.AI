@@ -32,25 +32,21 @@ socketio = SocketIO(app)
 # Beta mode flag
 beta_mode = True
 
-# OAuth Credentials (loaded from .env)
-CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
-CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
-
-if not CLIENT_ID or not CLIENT_SECRET:
-    logger.error("Google OAuth credentials are missing. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env.")
-
-logger.info(f"Client ID: {CLIENT_ID}")
-
-# Initialize OAuth
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
+REDIRECT_URI = "https://mindmash.ai/login/callback"
 oauth = OAuth(app)
-oauth.register(
+google = oauth.register(
     name="google",
-    client_id=os.getenv("GOOGLE_CLIENT_ID"),
-    client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
-    server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
-    client_kwargs={"scope": "openid email profile"}
+    client_id=GOOGLE_CLIENT_ID,
+    client_secret=GOOGLE_CLIENT_SECRET,
+    authorize_url="https://accounts.google.com/o/oauth2/auth",
+    authorize_params=None,
+    access_token_url="https://accounts.google.com/o/oauth2/token",
+    access_token_params=None,
+    client_kwargs={"scope": "openid email profile"},
+    redirect_uri=REDIRECT_URI,
 )
-
 # API Keys (loaded from .env)
 XAI_API_KEY = os.getenv("XAI_API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
