@@ -37,19 +37,20 @@ GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
 REDIRECT_URI = "https://mindmash.ai/login/callback"
 
 oauth = OAuth(app)
-
 google = oauth.register(
     name="google",
     client_id=GOOGLE_CLIENT_ID,
     client_secret=GOOGLE_CLIENT_SECRET,
-    authorize_url="https://accounts.google.com/o/oauth2/auth",
+    authorize_url="https://accounts.google.com/o/oauth2/v2/auth",
+    authorize_params=None,
     access_token_url="https://oauth2.googleapis.com/token",
     access_token_params=None,
-    authorize_params=None,
-    redirect_uri=REDIRECT_URI,
+    jwks_uri="https://www.googleapis.com/oauth2/v3/certs",  # Fix missing jwks_uri issue
+    userinfo_endpoint="https://openidconnect.googleapis.com/v1/userinfo",
     client_kwargs={"scope": "openid email profile"},
-    server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",  # ✅ Explicitly set metadata URL
+    redirect_uri=REDIRECT_URI,
 )
+
 # API Keys (loaded from .env)
 XAI_API_KEY = os.getenv("XAI_API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
