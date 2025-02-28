@@ -439,7 +439,8 @@ def login():
     """Initiate Google OAuth login process."""
     nonce = os.urandom(16).hex()  # Generate a secure nonce
     session["nonce"] = nonce  # Store nonce in session
-    redirect_uri = url_for("authorize", _external=True, _scheme="https")
+    session["oauth_state"] = str(uuid4())  # Generate and store OAuth state
+    return oauth.google.authorize_redirect(url_for("authorize", _external=True, _scheme="https"), state=session["oauth_state"])
     
 @app.route("/login/callback")
 def authorize():
@@ -447,12 +448,14 @@ def authorize():
         token = oauth.google.authorize_access_token()
         logger.info(f"OAuth Token Response: {token}")
 
-        if not token:
-            flash("Google authentication failed. Please try again.", "danger")
+        # Validate state to prevent CSRF attacks
+        state = request.args.get("state")
+        if state != session.pop("oauth_state", None):
+            flash("Invalid login state. Please try again.", "danger")
             return redirect(url_for("login"))
 
         nonce = session.pop("nonce", None)  # Retrieve nonce from session
-        user_info = oauth.google.parse_id_token(token, nonce=nonce)  # Correct indentation
+        user_info = oauth.google.parse_id_token(token, nonce=nonce)
         logger.info(f"User Info: {user_info}")
 
         if not user_info:
@@ -476,7 +479,6 @@ def authorize():
         logger.error(f"Google OAuth Error: {e}")
         flash("An error occurred during authentication. Please try again.", "danger")
         return redirect(url_for("login"))
-
 
 @app.route("/logout")
 def logout():
