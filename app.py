@@ -22,9 +22,10 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
+# Initialize Flask app with SocketIO
 app = Flask(__name__)
-app.secret_key = os.getenv("SECRET_KEY", "default-secret-key")  # Ensure this is set
-socketio = SocketIO(app, cors_allowed_origins=["https://mindmash.ai"], async_mode='eventlet')
+app.secret_key = os.getenv("SECRET_KEY", "default-secret-key")  # Use a default value for safety
+socketio = SocketIO(app)
 
 # Beta mode flag
 beta_mode = True
@@ -425,6 +426,7 @@ def handle_node_drag(data):
     y = data.get('y')
     if speaker and x is not None and y is not None:
         emit('map_update', {'speaker': speaker, 'x': x, 'y': y}, broadcast=True)
+
 # Routes
 @app.route("/")
 def landing():
@@ -432,7 +434,6 @@ def landing():
 
 @app.route("/login")
 def login():
-    logger.info(f"Starting login with Redirect URI: {url_for('google_callback', _external=True)}")
     if "username" in session:
         return redirect(url_for("dashboard"))
     redirect_uri = url_for("google_callback", _external=True)
