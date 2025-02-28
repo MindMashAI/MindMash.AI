@@ -33,22 +33,21 @@ socketio = SocketIO(app)
 # Beta mode flag
 beta_mode = True
 
-GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
-GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
-REDIRECT_URI = "https://mindmash.ai/login/callback"
-
 oauth = OAuth(app)
 google = oauth.register(
     name="google",
     client_id=GOOGLE_CLIENT_ID,
     client_secret=GOOGLE_CLIENT_SECRET,
     authorize_url="https://accounts.google.com/o/oauth2/v2/auth",
-    authorize_params=None,
+    authorize_params={"access_type": "offline", "prompt": "consent"},  # Force new login to avoid state mismatch
     access_token_url="https://oauth2.googleapis.com/token",
     access_token_params=None,
-    jwks_uri="https://www.googleapis.com/oauth2/v3/certs",  # Fix missing jwks_uri issue
+    jwks_uri="https://www.googleapis.com/oauth2/v3/certs",
     userinfo_endpoint="https://openidconnect.googleapis.com/v1/userinfo",
-    client_kwargs={"scope": "openid email profile"},
+    client_kwargs={
+        "scope": "openid email profile",
+        "state": lambda: session.get("oauth_state"),  # Ensure state is stored
+    },
     redirect_uri=REDIRECT_URI,
 )
 
@@ -437,21 +436,46 @@ def landing():
 
 @app.route("/login")
 def login():
-    session["nonce"] = str(uuid4())  # Generate and store nonce
-    return oauth.google.authorize_redirect(REDIRECT_URI)
+    session.clear()  # Clear session to prevent old state from interfering
+    session["oauth_state"] = os.urandom(24).hex()  # Generate fresh state
+    return oauth.google.authorize_redirect(url_for("authorize", _external=True, _scheme="https"))
 
 @app.route("/login/callback")
 def authorize():
-    token = oauth.google.authorize_access_token()
-   user_info = oauth.google.parse_id_token(token, nonce=session.get('nonce'))
-    
-    if not user_info:
-        flash("Google authentication failed. Please try again.", "danger")
+    try:
+        token = oauth.google.authorize_access_token()
+        logger.info(f"OAuth Token Response: {token}")
+
+        if not token:
+            flash("Google authentication failed. Please try again.", "danger")
+            return redirect(url_for("login"))
+
+        nonce = session.pop("nonce", None)  # Retrieve nonce from session
+        user_info = oauth.google.parse_id_token(token, nonce=nonce)
+        logger.info(f"User Info: {user_info}")
+
+        if not user_info:
+            flash("Google authentication failed. Please try again.", "danger")
+            return redirect(url_for("login"))
+
+        session["username"] = user_info.get("email")
+        session["display_name"] = user_info.get("name")
+
+        with get_db_connection() as conn:
+            user = conn.execute("SELECT username FROM users WHERE username = ?", (session["username"],)).fetchone()
+            if not user:
+                conn.execute("INSERT INTO users (username, display_name, google_id) VALUES (?, ?, ?)", 
+                             (session["username"], session["display_name"], user_info.get("sub")))
+                conn.commit()
+
+        flash("Successfully logged in!", "success")
+        return redirect(url_for("dashboard"))
+
+    except Exception as e:
+        logger.error(f"OAuth Callback Error: {e}")
+        flash(f"An error occurred: {e}", "danger")  # Display error
         return redirect(url_for("login"))
 
-    session["user"] = user_info
-    flash("Successfully logged in!", "success")
-    return redirect(url_for("dashboard"))
 
 @app.route("/logout")
 def logout():
