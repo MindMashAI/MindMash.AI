@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 # Initialize Flask app with SocketIO
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "default-secret-key")  # Use a default value for safety
-socketio = SocketIO(app)
+socketio = SocketIO(app, cors_allowed_origins=["https://mindmash.ai"], async_mode='eventlet')
 
 # Beta mode flag
 beta_mode = True
