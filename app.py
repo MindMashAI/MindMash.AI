@@ -14,8 +14,6 @@ import openai
 from ibm_watson import NaturalLanguageUnderstandingV1
 from ibm_watson.natural_language_understanding_v1 import Features, KeywordsOptions, SentimentOptions, EmotionOptions
 from ibm_cloud_sdk_core.authenticators import IAMAuthenticator
-from flask_sslify import SSLify
-from uuid import uuid4
 
 # Load environment variables
 load_dotenv()
@@ -26,29 +24,29 @@ logger = logging.getLogger(__name__)
 
 # Initialize Flask app with SocketIO
 app = Flask(__name__)
-sslify = SSLify(app)  # This forces HTTPS
 app.secret_key = os.getenv("SECRET_KEY", "default-secret-key")  # Use a default value for safety
 socketio = SocketIO(app)
 
 # Beta mode flag
 beta_mode = True
 
+# OAuth Credentials (loaded from .env)
+CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
+
+if not CLIENT_ID or not CLIENT_SECRET:
+    logger.error("Google OAuth credentials are missing. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env.")
+
+logger.info(f"Client ID: {CLIENT_ID}")
+
+# Initialize OAuth
 oauth = OAuth(app)
-google = oauth.register(
+oauth.register(
     name="google",
-    client_id=GOOGLE_CLIENT_ID,
-    client_secret=GOOGLE_CLIENT_SECRET,
-    authorize_url="https://accounts.google.com/o/oauth2/v2/auth",
-    authorize_params={"access_type": "offline", "prompt": "consent"},  # Force new login to avoid state mismatch
-    access_token_url="https://oauth2.googleapis.com/token",
-    access_token_params=None,
-    jwks_uri="https://www.googleapis.com/oauth2/v3/certs",
-    userinfo_endpoint="https://openidconnect.googleapis.com/v1/userinfo",
-    client_kwargs={
-        "scope": "openid email profile",
-        "state": lambda: session.get("oauth_state"),  # Ensure state is stored
-    },
-    redirect_uri=REDIRECT_URI,
+    client_id=CLIENT_ID,
+    client_secret=CLIENT_SECRET,
+    server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+    client_kwargs={"scope": "openid email profile"}
 )
 
 # API Keys (loaded from .env)
@@ -436,49 +434,36 @@ def landing():
 
 @app.route("/login")
 def login():
-    """Initiate Google OAuth login process."""
-    nonce = os.urandom(16).hex()  # Generate a secure nonce
-    session["nonce"] = nonce  # Store nonce in session
-    session["oauth_state"] = str(uuid4())  # Generate and store OAuth state
-    return oauth.google.authorize_redirect(url_for("authorize", _external=True, _scheme="https"), state=session["oauth_state"])
-    
-@app.route("/login/callback")
-def authorize():
+    if "username" in session:
+        return redirect(url_for("dashboard"))
+    redirect_uri = url_for("google_callback", _external=True)
+    return oauth.google.authorize_redirect(redirect_uri)
+
+@app.route("/auth/google/callback")
+def google_callback():
     try:
         token = oauth.google.authorize_access_token()
-        logger.info(f"OAuth Token Response: {token}")
+        user_info = token["userinfo"]
+        google_id = user_info["sub"]
+        email = user_info["email"]
+        display_name = user_info.get("name", email.split("@")[0])
 
-        # Validate state to prevent CSRF attacks
-        state = request.args.get("state")
-        if state != session.pop("oauth_state", None):
-            flash("Invalid login state. Please try again.", "danger")
-            return redirect(url_for("login"))
-
-        nonce = session.pop("nonce", None)  # Retrieve nonce from session
-        user_info = oauth.google.parse_id_token(token, nonce=nonce)
-        logger.info(f"User Info: {user_info}")
-
-        if not user_info:
-            flash("Google authentication failed. Please try again.", "danger")
-            return redirect(url_for("login"))
-
-        session["username"] = user_info.get("email")
-        session["display_name"] = user_info.get("name")
-
-        with get_db_connection() as conn:
-            user = conn.execute("SELECT username FROM users WHERE username = ?", (session["username"],)).fetchone()
-            if not user:
-                conn.execute("INSERT INTO users (username, display_name, google_id) VALUES (?, ?, ?)", 
-                             (session["username"], session["display_name"], user_info.get("sub")))
-                conn.commit()
-
-        flash("Successfully logged in!", "success")
+        with get_db_connection() as db:
+            user = db.execute("SELECT * FROM users WHERE google_id = ?", (google_id,)).fetchone()
+            if user:
+                session["username"] = user["username"]
+            else:
+                db.execute(
+                    "INSERT INTO users (username, display_name, google_id, is_premium) VALUES (?, ?, ?, ?)",
+                    (email, display_name, google_id, 0 if beta_mode else 0)
+                )
+                db.commit()
+                session["username"] = email
         return redirect(url_for("dashboard"))
-
     except Exception as e:
-        logger.error(f"Google OAuth Error: {e}")
-        flash("An error occurred during authentication. Please try again.", "danger")
-        return redirect(url_for("login"))
+        logger.error(f"Callback error: {str(e)}")
+        flash(f"Login error: {str(e)}")
+        return redirect(url_for("landing"))
 
 @app.route("/logout")
 def logout():
@@ -570,5 +555,4 @@ def terms():
     return render_template("terms.html", beta_mode=beta_mode)
 
 if __name__ == "__main__":
-    socketio.run(app, host="0.0.0.0", port=5000, ssl_context="adhoc")
-
+    socketio.run(app, debug=True, host="127.0.0.1", port=5000)
