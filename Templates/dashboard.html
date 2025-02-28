@@ -95,7 +95,8 @@
     </div>
 
     <script>
-        const socket = io();
+        // Use wss://mindmash.ai for reverse proxy on port 443, or wss://mindmash.ai:5000 if running Flask with SSL directly on port 5000
+        const socket = io('wss://mindmash.ai');
         const svg = d3.select('#aiCollaborationMap svg');
         const width = svg.node().getBoundingClientRect().width - 40;
         const height = 250 - 40;
