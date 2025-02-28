@@ -410,7 +410,6 @@ def handle_node_drag(data):
     y = data.get('y')
     if speaker and x is not None and y is not None:
         emit('map_update', {'speaker': speaker, 'x': x, 'y': y}, broadcast=True)
-
 # Routes
 @app.route("/")
 def landing():
