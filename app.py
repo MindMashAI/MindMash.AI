@@ -442,8 +442,6 @@ def login():
 
     redirect_uri = url_for("authorize", _external=True, _scheme="https")
     return oauth.google.authorize_redirect(redirect_uri, nonce=nonce)
-
-
 @app.route("/login/callback")
 def authorize():
     """Handle the OAuth callback from Google."""
