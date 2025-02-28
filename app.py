@@ -434,6 +434,7 @@ def landing():
 
 @app.route("/login")
 def login():
+    logger.info(f"Starting login with Redirect URI: {url_for('google_callback', _external=True)}")
     if "username" in session:
         return redirect(url_for("dashboard"))
     redirect_uri = url_for("google_callback", _external=True)
