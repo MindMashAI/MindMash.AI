@@ -19,13 +19,13 @@ from ibm_cloud_sdk_core.authenticators import IAMAuthenticator
 load_dotenv()
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 # Initialize Flask app with SocketIO
 app = Flask(__name__)
-app.secret_key = os.getenv("SECRET_KEY", "default-secret-key")  # Use a default value for safety
-socketio = SocketIO(app, cors_allowed_origins=["https://mindmash.ai"], async_mode='eventlet')
+app.secret_key = os.getenv("SECRET_KEY", "default-secret-key")  # Use environment variable
+socketio = SocketIO(app)  # Start with default configuration (no CORS or async_mode initially)
 
 # Beta mode flag
 beta_mode = True
@@ -60,22 +60,6 @@ STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY")
 # API URLs and configurations
 XAI_API_URL = "https://api.x.ai/v1/chat/completions"
 WATSON_URL = os.getenv("WATSON_URL")
-
-# Check for missing API keys
-missing_keys = []
-for key_name, key_value in [
-    ("XAI_API_KEY", XAI_API_KEY),
-    ("OPENAI_API_KEY", OPENAI_API_KEY),
-    ("GEMINI_API_KEY", GEMINI_API_KEY),
-    ("WATSON_API_KEY", WATSON_API_KEY),
-    ("STRIPE_SECRET_KEY", STRIPE_SECRET_KEY),
-    ("STRIPE_PUBLISHABLE_KEY", STRIPE_PUBLISHABLE_KEY),
-]:
-    if not key_value:
-        missing_keys.append(key_name)
-
-if missing_keys:
-    logger.error(f"Missing environment variables: {', '.join(missing_keys)}. Ensure they are set in .env.")
 
 # Configure APIs
 if OPENAI_API_KEY:
@@ -555,6 +539,4 @@ def terms():
     return render_template("terms.html", beta_mode=beta_mode)
 
 if __name__ == "__main__":
-    from werkzeug.middleware.proxy_fix import ProxyFix
-    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1, x_prefix=1)
     socketio.run(app, debug=True, host="0.0.0.0", port=5000)
