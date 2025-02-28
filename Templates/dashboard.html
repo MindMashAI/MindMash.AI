@@ -95,7 +95,7 @@
     </div>
 
     <script>
-        const socket = io();
+        const socket = io('wss://mindmash.ai');
         const svg = d3.select('#aiCollaborationMap svg');
         const width = svg.node().getBoundingClientRect().width - 40;
         const height = 250 - 40;
