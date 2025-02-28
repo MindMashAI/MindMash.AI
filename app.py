@@ -14,6 +14,7 @@ import openai
 from ibm_watson import NaturalLanguageUnderstandingV1
 from ibm_watson.natural_language_understanding_v1 import Features, KeywordsOptions, SentimentOptions, EmotionOptions
 from ibm_cloud_sdk_core.authenticators import IAMAuthenticator
+from flask_sslify import SSLify
 
 # Load environment variables
 load_dotenv()
@@ -24,6 +25,7 @@ logger = logging.getLogger(__name__)
 
 # Initialize Flask app with SocketIO
 app = Flask(__name__)
+sslify = SSLify(app)  # This forces HTTPS
 app.secret_key = os.getenv("SECRET_KEY", "default-secret-key")  # Use a default value for safety
 socketio = SocketIO(app)
 
@@ -43,8 +45,8 @@ logger.info(f"Client ID: {CLIENT_ID}")
 oauth = OAuth(app)
 oauth.register(
     name="google",
-    client_id=CLIENT_ID,
-    client_secret=CLIENT_SECRET,
+    client_id=os.getenv("GOOGLE_CLIENT_ID"),
+    client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
     server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
     client_kwargs={"scope": "openid email profile"}
 )
@@ -434,36 +436,21 @@ def landing():
 
 @app.route("/login")
 def login():
-    if "username" in session:
-        return redirect(url_for("dashboard"))
-    redirect_uri = url_for("google_callback", _external=True)
+    redirect_uri = url_for("authorize", _external=True, _scheme="https")
     return oauth.google.authorize_redirect(redirect_uri)
+)
+@app.route("/login/callback")
+def authorize():
+    token = oauth.google.authorize_access_token()
+    user_info = oauth.google.parse_id_token(token)
+    
+    if not user_info:
+        flash("Google authentication failed. Please try again.", "danger")
+        return redirect(url_for("login"))
 
-@app.route("/auth/google/callback")
-def google_callback():
-    try:
-        token = oauth.google.authorize_access_token()
-        user_info = token["userinfo"]
-        google_id = user_info["sub"]
-        email = user_info["email"]
-        display_name = user_info.get("name", email.split("@")[0])
-
-        with get_db_connection() as db:
-            user = db.execute("SELECT * FROM users WHERE google_id = ?", (google_id,)).fetchone()
-            if user:
-                session["username"] = user["username"]
-            else:
-                db.execute(
-                    "INSERT INTO users (username, display_name, google_id, is_premium) VALUES (?, ?, ?, ?)",
-                    (email, display_name, google_id, 0 if beta_mode else 0)
-                )
-                db.commit()
-                session["username"] = email
-        return redirect(url_for("dashboard"))
-    except Exception as e:
-        logger.error(f"Callback error: {str(e)}")
-        flash(f"Login error: {str(e)}")
-        return redirect(url_for("landing"))
+    session["user"] = user_info
+    flash("Successfully logged in!", "success")
+    return redirect(url_for("dashboard"))
 
 @app.route("/logout")
 def logout():
@@ -555,4 +542,5 @@ def terms():
     return render_template("terms.html", beta_mode=beta_mode)
 
 if __name__ == "__main__":
-    socketio.run(app, debug=True, host="127.0.0.1", port=5000)
+    socketio.run(app, host="0.0.0.0", port=5000, ssl_context="adhoc")
+
