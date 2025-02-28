@@ -436,12 +436,17 @@ def landing():
 
 @app.route("/login")
 def login():
-    session.clear()  # Clear session to prevent old state from interfering
-    session["oauth_state"] = os.urandom(24).hex()  # Generate fresh state
-    return oauth.google.authorize_redirect(url_for("authorize", _external=True, _scheme="https"))
+    """Initiate Google OAuth login process."""
+    nonce = os.urandom(16).hex()  # Generate a secure nonce
+    session["nonce"] = nonce  # Store nonce in session
+
+    redirect_uri = url_for("authorize", _external=True, _scheme="https")
+    return oauth.google.authorize_redirect(redirect_uri, nonce=nonce)
+
 
 @app.route("/login/callback")
 def authorize():
+    """Handle the OAuth callback from Google."""
     try:
         token = oauth.google.authorize_access_token()
         logger.info(f"OAuth Token Response: {token}")
@@ -451,6 +456,12 @@ def authorize():
             return redirect(url_for("login"))
 
         nonce = session.pop("nonce", None)  # Retrieve nonce from session
+        
+        if not nonce:
+            logger.error("Missing nonce in session! Possible CSRF attack or session expiry.")
+            flash("Authentication error. Please try again.", "danger")
+            return redirect(url_for("login"))
+
         user_info = oauth.google.parse_id_token(token, nonce=nonce)
         logger.info(f"User Info: {user_info}")
 
@@ -461,6 +472,7 @@ def authorize():
         session["username"] = user_info.get("email")
         session["display_name"] = user_info.get("name")
 
+        # Store user in DB if not exists
         with get_db_connection() as conn:
             user = conn.execute("SELECT username FROM users WHERE username = ?", (session["username"],)).fetchone()
             if not user:
@@ -470,6 +482,11 @@ def authorize():
 
         flash("Successfully logged in!", "success")
         return redirect(url_for("dashboard"))
+
+    except Exception as e:
+        logger.error(f"OAuth Authorization Error: {e}")
+        flash("An error occurred during authentication. Please try again.", "danger")
+        return redirect(url_for("login"))
 
     except Exception as e:
         logger.error(f"OAuth Callback Error: {e}")
